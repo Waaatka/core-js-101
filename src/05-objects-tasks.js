@@ -6,7 +6,6 @@
  *                                                                                                *
  ************************************************************************************************ */
 
-
 /**
  * Returns the rectangle object with width and height parameters and getArea() method
  *
@@ -20,10 +19,11 @@
  *    console.log(r.height);      // => 20
  *    console.log(r.getArea());   // => 200
  */
-function Rectangle(/* width, height */) {
-  throw new Error('Not implemented');
+function Rectangle(width, height) {
+  this.width = width;
+  this.height = height;
+  this.getArea = () => this.width * this.height;
 }
-
 
 /**
  * Returns the JSON representation of specified object
@@ -35,10 +35,9 @@ function Rectangle(/* width, height */) {
  *    [1,2,3]   =>  '[1,2,3]'
  *    { width: 10, height : 20 } => '{"height":10,"width":20}'
  */
-function getJSON(/* obj */) {
-  throw new Error('Not implemented');
+function getJSON(obj) {
+  return JSON.stringify(obj);
 }
-
 
 /**
  * Returns the object of specified type from JSON representation
@@ -51,10 +50,11 @@ function getJSON(/* obj */) {
  *    const r = fromJSON(Circle.prototype, '{"radius":10}');
  *
  */
-function fromJSON(/* proto, json */) {
-  throw new Error('Not implemented');
+function fromJSON(proto, json) {
+  const obj = JSON.parse(json);
+  Object.setPrototypeOf(obj, proto);
+  return obj;
 }
-
 
 /**
  * Css selectors builder
@@ -111,35 +111,60 @@ function fromJSON(/* proto, json */) {
  */
 
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  selectors: [],
+  checkSelectorTypes(selectors) {
+    const types = selectors.map((x) => x.type);
+    const uniqTypes = Array.from(new Set(types));
+    const correctOrder = ['element', 'id', 'class', 'attr', 'pseudoClass', 'pseudoElement'].filter((x) => uniqTypes.includes(x));
+    for (let i = 0; i < uniqTypes.length; i += 1) {
+      if (correctOrder[i] !== uniqTypes[i]) {
+        return false;
+      }
+    }
+    return true;
+  },
+  add(selector) {
+    if (['id', 'element', 'pseudoElement'].includes(selector.type) && this.selectors.some((x) => x.type === selector.type)) {
+      throw new Error('Element, id and pseudo-element should not occur more then one time inside the selector');
+    }
+
+    const newSelectors = [...this.selectors, selector];
+    if (!this.checkSelectorTypes(newSelectors)) {
+      throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    }
+    return { ...this, selectors: newSelectors };
+  },
+  element(value) {
+    return this.add({ selector: value, type: 'element' });
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    return this.add({ selector: `#${value}`, type: 'id' });
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    return this.add({ selector: `.${value}`, type: 'class' });
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    return this.add({ selector: `[${value}]`, type: 'attr' });
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    return this.add({ selector: `:${value}`, type: 'pseudoClass' });
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    return this.add({ selector: `::${value}`, type: 'pseudoElement' });
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  combine(selector1, combinator, selector2) {
+    return { ...this, selectors: [...selector1.selectors, { selector: ` ${combinator} `, type: 'combiner' }, ...selector2.selectors] };
+  },
+  stringify() {
+    return this.selectors.map((x) => x.selector).join('');
   },
 };
-
 
 module.exports = {
   Rectangle,
